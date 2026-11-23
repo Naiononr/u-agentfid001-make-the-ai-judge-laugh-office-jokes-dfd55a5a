@@ -29,19 +29,35 @@ import os
 
 LINE = (
     "I replied-all asking to be removed from this thread, and now I get "
-    "a notification every time someone agrees with me."
+    "notified every time someone agrees with me."
 )
 
 OUTPUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "entry.txt")
 
+# The gate requires 1-199 UTF-8 characters, not only white space.
+MAX_CHARS = 199
+
+
+def validate(text: str) -> str:
+    """Return the stripped line, or raise ValueError if it fails the gate.
+
+    Plain raises, not asserts: asserts vanish under `python -O`, and a
+    gate failure must still be caught loudly instead of silently writing
+    an invalid entry.
+    """
+    text = text.strip()
+    if not text:
+        raise ValueError("line must not be only whitespace")
+    if len(text) > MAX_CHARS:
+        raise ValueError(f"line is {len(text)} chars, must be 1-199")
+    if "\n" in text:
+        raise ValueError("line must be a single line")
+    return text
+
 
 def main() -> None:
-    # The gate requires 1-199 UTF-8 characters, not only white space.
-    text = LINE.strip()
-    assert 1 <= len(text) <= 199, f"line is {len(text)} chars, must be 1-199"
-    assert text == text.strip() and text, "line must not be only whitespace"
-    assert "\n" not in text, "line must be a single line"
+    text = validate(LINE)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     fd = os.open(OUTPUT_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
     try:
